@@ -7,7 +7,7 @@ import (
 	"github.com/adharshmk96/stk/pkg/middleware"
 )
 
-func rateLimiter() gsk.Middleware {
+func RateLimiter() gsk.Middleware {
 	rlConfig := middleware.RateLimiterConfig{
 		RequestsPerInterval: 10,
 		Interval:            60 * time.Second,
