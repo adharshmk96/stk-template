@@ -14,8 +14,8 @@ def ignore_dir(dir):
         return True
 
 def generate_var_name(file_path, base_path):
-    relative_path = file_path.replace(base_path, '')
-    var_name = relative_path.replace(os.sep, '_').replace('.', '').strip('_').replace('-', '')
+    relative_path = file_path.replace(base_path, '').replace('\\', '/')
+    var_name = relative_path.replace(os.sep, '_').replace('.', '').strip('_').replace('-', '').replace('/', '')
     var_name = var_name.upper()
     return relative_path, var_name + "_TPL"
 
@@ -42,24 +42,24 @@ def write_to_go_template(base_path, target_path):
                 
                 template_map.append(TemplateMap(relative_path, var_name))
 
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as input_file:
+                with open(file_path, 'r', encoding='utf-8') as input_file:
                     content = input_file.read()
                     content = transform_content(content)
+
+                    structure = f'var {var_name} = Template{{\n\tFilePath: "{relative_path}",\n\tContent: `{content}`,\n}}\n\n'
                     
                     # Write variable declaration and content to the output file
-                    output_file.write(f'var {var_name} = `{content}`\n\n')
+                    output_file.write(structure)
 
-def write_to_template_map(target_path):
-    with open(target_path, 'w') as output_file:
+        # Write the template list to the output file
+        output_file.write("var BoilerPlateTemplates = []Template{\n")
         for template in template_map:
-            to_write = f'"{template.relative_path}": {template.var_name},\n'
-            output_file.write(to_write)
+            output_file.write(f'\t{template.var_name},\n')
+        output_file.write("}\n")
 
-                
 
 if __name__ == '__main__':
     base_directory = "./"
     target_file_path = 'template.go'
     write_to_go_template(base_directory, target_file_path)
-    write_to_template_map("template_map")
     print(f"All files have been written to {target_file_path}.")
