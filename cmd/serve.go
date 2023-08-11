@@ -1,8 +1,10 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
+	"sync"
+
 	"github.com/adharshmk96/stk-template/server"
+	"github.com/spf13/cobra"
 )
 
 var startingPort string
@@ -12,8 +14,20 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the server",
 	Run: func(cmd *cobra.Command, args []string) {
+		var wg sync.WaitGroup
+
+		wg.Add(1)
+
 		startAddr := "0.0.0.0:"
-		server.StartServer(startAddr + startingPort)
+
+		go func() {
+			defer wg.Done()
+			_, done := server.StartHttpServer(startAddr + startingPort)
+			// blocks the routine until done is closed
+			<-done
+		}()
+
+		wg.Wait()
 	},
 }
 

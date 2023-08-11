@@ -8,7 +8,7 @@ type pingHandler struct {
 	pingService core.PingService
 }
 
-func NewPingHandler(pingService core.PingService) core.PingHandler {
+func NewPingHandler(pingService core.PingService) core.PingHandlers {
 	return &pingHandler{
 		pingService: pingService,
 	}

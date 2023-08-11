@@ -1,21 +1,72 @@
 package server
 
-import "github.com/adharshmk96/stk/gsk"
+import (
+	"os"
+	"os/signal"
+	"syscall"
 
-func StartServer(port string) *gsk.Server {
+	"github.com/adharshmk96/stk-template/pkg/http/handler"
+	"github.com/adharshmk96/stk-template/pkg/service"
+	"github.com/adharshmk96/stk-template/pkg/storage/sqlite"
+	"github.com/adharshmk96/stk-template/server/infra"
+	svrmw "github.com/adharshmk96/stk-template/server/middleware"
+	"github.com/adharshmk96/stk-template/server/routing"
+	"github.com/adharshmk96/stk/gsk"
+	"github.com/adharshmk96/stk/pkg/db"
+	"github.com/adharshmk96/stk/pkg/middleware"
+)
+
+func StartHttpServer(port string) (*gsk.Server, chan bool) {
+
+	logger := infra.GetLogger()
 
 	serverConfig := &gsk.ServerConfig{
-		Port: port,
+		Port:   port,
+		Logger: logger,
 	}
 
 	server := gsk.New(serverConfig)
 
-	setupRoutes(server)
-
-	rateLimiter := rateLimiter()
+	rateLimiter := svrmw.RateLimiter()
 	server.Use(rateLimiter)
+	server.Use(middleware.RequestLogger)
+	server.Use(middleware.CORS(middleware.CORSConfig{
+		AllowAll: true,
+	}))
+
+	infra.LoadDefaultConfig()
+
+	intializeServer(server)
 
 	server.Start()
 
-	return server
+	// graceful shutdown
+	done := make(chan bool)
+
+	// A go routine that listens for os signals
+	// it will block until it receives a signal
+	// once it receives a signal, it will shutdown close the done channel
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+
+		if err := server.Shutdown(); err != nil {
+			logger.Error(err)
+		}
+
+		close(done)
+	}()
+
+	return server, done
+}
+
+func intializeServer(server *gsk.Server) {
+	conn := db.GetSqliteConnection("sqlite.db")
+
+	stktemplateStorage := sqlite.NewSqliteRepo(conn)
+	stktemplateService := service.NewPingService(stktemplateStorage)
+	stktemplateHandler := handler.NewPingHandler(stktemplateService)
+
+	routing.SetupPingRoutes(server, stktemplateHandler)
 }
