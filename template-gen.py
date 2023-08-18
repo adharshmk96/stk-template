@@ -28,6 +28,7 @@ template_map = []
 
 def write_to_go_template(base_path, target_path):
     with open(target_path, 'w') as output_file:
+        output_file.write("package tpl\n\n")
         # Walk through the base directory
         for root, _, files in os.walk(base_path):
             for f in files:
