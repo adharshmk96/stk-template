@@ -6,7 +6,7 @@ ignore_files = ['template-gen.py', 'template.go', "go.mod", "go.sum", "template_
 def transform_content(content):
     # Replacing specific strings with given replacements
     content = content.replace('stktemplate', '{{ .AppName }}')
-    content = content.replace('github.com/adharshmk96/stk-template', '{{ .PkgName }}')
+    content = content.replace('github.com/adharshmk96/stk-template/singlemod', '{{ .PkgName }}')
     return content
 
 def ignore_dir(dir):
