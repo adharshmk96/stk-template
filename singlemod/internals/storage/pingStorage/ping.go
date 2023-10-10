@@ -1,4 +1,4 @@
-package sqlite
+package pingStorage
 
 import "github.com/adharshmk96/stk-template/singlemod/internals/core/serr"
 

@@ -1,0 +1,9 @@
+project:
+  name: "My Project"
+  corePath: "internals/core"
+  entityPath: "internals/core/entity"
+  errorsPath: "internals/core/errors"
+  httpPath: "internals/http"
+  servicePath: "internals/service"
+  storagePath: "internals/storage"
+

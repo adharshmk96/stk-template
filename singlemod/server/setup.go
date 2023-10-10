@@ -5,14 +5,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/adharshmk96/stk-template/singlemod/internals/http/handler"
-	"github.com/adharshmk96/stk-template/singlemod/internals/service"
-	"github.com/adharshmk96/stk-template/singlemod/internals/storage/sqlite"
 	"github.com/adharshmk96/stk-template/singlemod/server/infra"
 	svrmw "github.com/adharshmk96/stk-template/singlemod/server/middleware"
 	"github.com/adharshmk96/stk-template/singlemod/server/routing"
 	"github.com/adharshmk96/stk/gsk"
-	"github.com/adharshmk96/stk/pkg/db"
 	"github.com/adharshmk96/stk/pkg/middleware"
 )
 
@@ -36,7 +32,7 @@ func StartHttpServer(port string) (*gsk.Server, chan bool) {
 
 	infra.LoadDefaultConfig()
 
-	intializeServer(server)
+	routing.SetupRoutes(server)
 
 	server.Start()
 
@@ -59,14 +55,4 @@ func StartHttpServer(port string) (*gsk.Server, chan bool) {
 	}()
 
 	return server, done
-}
-
-func intializeServer(server *gsk.Server) {
-	conn := db.GetSqliteConnection("sqlite.db")
-
-	stktemplateStorage := sqlite.NewSqliteRepo(conn)
-	stktemplateService := service.NewPingService(stktemplateStorage)
-	stktemplateHandler := handler.NewPingHandler(stktemplateService)
-
-	routing.SetupPingRoutes(server, stktemplateHandler)
 }

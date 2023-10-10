@@ -24,7 +24,8 @@ class TemplateMap:
     relative_path: str
     var_name: str
 
-template_map = []
+full_template_map = []
+module_template_map = []
 
 def write_to_go_template(base_path, target_path):
     with open(target_path, 'w') as output_file:
@@ -41,7 +42,7 @@ def write_to_go_template(base_path, target_path):
                 # Create a valid Go variable name from the file path
                 relative_path, var_name = generate_var_name(file_path, base_path)              
                 
-                template_map.append(TemplateMap(relative_path, var_name))
+                full_template_map.append(TemplateMap(relative_path, var_name))
 
                 with open(file_path, 'r', encoding='utf-8') as input_file:
                     content = input_file.read()
@@ -53,8 +54,8 @@ def write_to_go_template(base_path, target_path):
                     output_file.write(structure)
 
         # Write the template list to the output file
-        output_file.write("var BoilerPlateTemplates = []Template{\n")
-        for template in template_map:
+        output_file.write("var MultiModTemplates = []Template{\n")
+        for template in full_template_map:
             output_file.write(f'\t{template.var_name},\n')
         output_file.write("}\n")
 

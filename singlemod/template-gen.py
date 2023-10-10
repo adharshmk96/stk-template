@@ -21,43 +21,41 @@ def generate_var_name(file_path, base_path):
 
 @dataclass
 class TemplateMap:
+    absolute_path: str
     relative_path: str
     var_name: str
 
-template_map = []
+module_template_map = []
+
+def find_project_template_map(base_path):
+    project_template_map = []
+    for root, _, files in os.walk(base_path):
+        for f in files:
+            if ignore_dir(root) or (f in ignore_files):
+                continue
+        
+            absolute_path = os.path.join(root, f)
+            relative_path, var_name = generate_var_name(absolute_path, base_path)
+            project_template_map.append(TemplateMap(absolute_path, relative_path, var_name))
+    return project_template_map
+
 
 def write_to_go_template(base_path, target_path):
+    project_template_map = find_project_template_map(base_path)
+    file_content = "package tpl\n\n"
+    for template in project_template_map:
+        with open(template.absolute_path, 'r', encoding='utf-8') as input_file:
+            content = input_file.read()
+            content = transform_content(content)
+            structure = f'var {template.var_name} = Template{{\n\tFilePath: "{template.relative_path}",\n\tContent: `{content}`,\n}}\n\n'
+            file_content += structure
+
     with open(target_path, 'w') as output_file:
-        output_file.write("package tpl\n\n")
-        # Walk through the base directory
-        for root, _, files in os.walk(base_path):
-            for f in files:
-                if ignore_dir(root):
-                    continue
-
-                if f in ignore_files:
-                    continue
-                file_path = os.path.join(root, f)
-                # Create a valid Go variable name from the file path
-                relative_path, var_name = generate_var_name(file_path, base_path)              
-                
-                template_map.append(TemplateMap(relative_path, var_name))
-
-                with open(file_path, 'r', encoding='utf-8') as input_file:
-                    content = input_file.read()
-                    content = transform_content(content)
-
-                    structure = f'var {var_name} = Template{{\n\tFilePath: "{relative_path}",\n\tContent: `{content}`,\n}}\n\n'
-                    
-                    # Write variable declaration and content to the output file
-                    output_file.write(structure)
-
-        # Write the template list to the output file
-        output_file.write("var BoilerPlateTemplates = []Template{\n")
-        for template in template_map:
+        output_file.write(file_content)
+        output_file.write("var SingleModTemplates = []Template{\n")
+        for template in project_template_map:
             output_file.write(f'\t{template.var_name},\n')
         output_file.write("}\n")
-
 
 if __name__ == '__main__':
     base_directory = "./"
