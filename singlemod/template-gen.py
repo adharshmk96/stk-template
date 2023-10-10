@@ -3,7 +3,13 @@ from dataclasses import dataclass
 
 ignore_files = ['template-gen.py', 'template.go', "go.mod", "go.sum", "template_map"]
 
-def transform_content(content):
+@dataclass
+class TemplateMap:
+    absolute_path: str
+    relative_path: str
+    var_name: str
+
+def replace_pkg_app_names(content):
     # Replacing specific strings with given replacements
     content = content.replace('stktemplate', '{{ .AppName }}')
     content = content.replace('github.com/adharshmk96/stk-template/singlemod', '{{ .PkgName }}')
@@ -19,37 +25,30 @@ def generate_var_name(file_path, base_path):
     var_name = var_name.upper()
     return relative_path, var_name + "_TPL"
 
-@dataclass
-class TemplateMap:
-    absolute_path: str
-    relative_path: str
-    var_name: str
-
-module_template_map = []
-
 def find_project_template_map(base_path):
     project_template_map = []
     for root, _, files in os.walk(base_path):
         for f in files:
             if ignore_dir(root) or (f in ignore_files):
                 continue
-        
+                   
             absolute_path = os.path.join(root, f)
             relative_path, var_name = generate_var_name(absolute_path, base_path)
             project_template_map.append(TemplateMap(absolute_path, relative_path, var_name))
     return project_template_map
 
-
-def write_to_go_template(base_path, target_path):
+def generate_project_template(base_path):
     project_template_map = find_project_template_map(base_path)
-    file_content = "package tpl\n\n"
+    project_template = "package tpl\n\n"
     for template in project_template_map:
         with open(template.absolute_path, 'r', encoding='utf-8') as input_file:
             content = input_file.read()
-            content = transform_content(content)
+            content = replace_pkg_app_names(content)
             structure = f'var {template.var_name} = Template{{\n\tFilePath: "{template.relative_path}",\n\tContent: `{content}`,\n}}\n\n'
-            file_content += structure
+            project_template += structure
+    return project_template
 
+def write_project_template_to_file(target_path, file_content, project_template_map):
     with open(target_path, 'w') as output_file:
         output_file.write(file_content)
         output_file.write("var SingleModTemplates = []Template{\n")
@@ -57,8 +56,14 @@ def write_to_go_template(base_path, target_path):
             output_file.write(f'\t{template.var_name},\n')
         output_file.write("}\n")
 
+def create_project_template(base_directory, target_file_path):
+    project_template_map = find_project_template_map(base_directory)
+    project_template = generate_project_template(base_directory)
+    write_project_template_to_file(target_file_path, project_template, project_template_map)
+
 if __name__ == '__main__':
     base_directory = "./"
     target_file_path = 'singlemod.go'
-    write_to_go_template(base_directory, target_file_path)
+    create_project_template(base_directory, target_file_path)
+
     print(f"All files have been written to {target_file_path}.")
