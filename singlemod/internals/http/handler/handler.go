@@ -5,11 +5,11 @@ import (
 )
 
 type pingHandler struct {
-	pingService entity.PingService
+	service entity.PingService
 }
 
-func NewPingHandler(pingService entity.PingService) entity.PingHandlers {
+func NewPingHandler(service entity.PingService) entity.PingHandlers {
 	return &pingHandler{
-		pingService: pingService,
+		service: service,
 	}
 }

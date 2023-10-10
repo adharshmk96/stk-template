@@ -13,10 +13,10 @@ Response:
 - 500: Internal Server Error
 */
 func (h *pingHandler) PingHandler(gc *gsk.Context) {
-	
-	ping := h.pingService.PingService()
+
+	ping := h.service.PingService()
 
 	gc.Status(http.StatusOK).JSONResponse(gsk.Map{
 		"message": ping,
 	})
-}	
+}

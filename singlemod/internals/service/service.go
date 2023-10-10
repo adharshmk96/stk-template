@@ -5,11 +5,11 @@ import (
 )
 
 type pingService struct {
-	pingStorage entity.PingStorage
+	storage entity.PingStorage
 }
 
 func NewPingService(storage entity.PingStorage) entity.PingService {
 	return &pingService{
-		pingStorage: storage,
+		storage: storage,
 	}
 }
