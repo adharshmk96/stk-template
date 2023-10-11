@@ -14,7 +14,7 @@ type PingStorage interface {
 
 // Service
 type PingService interface {
-	PingService() string
+	PingService() (string, error)
 }
 
 // Handler

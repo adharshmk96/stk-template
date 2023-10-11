@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 
 ignore_files = ['template-gen.py', 'template.go', "go.mod", "go.sum", "template_map"]
+ignore_dirs = ['.git', 'mocks']
 
 @dataclass
 class TemplateMap:
@@ -22,8 +23,10 @@ def replace_module_names(content):
     return content
 
 def ignore_dir(dir):
-    if ".git" in dir:
-        return True
+    for ignore_dir in ignore_dirs:
+        if ignore_dir in dir:
+            return True
+    return False
 
 def generate_var_name(file_path, base_path):
     relative_path = file_path.replace(base_path, '').replace('\\', '/')
@@ -72,7 +75,7 @@ def find_module_template_map(base_path):
     module_template_map = []
     for root, _, files in os.walk(base_path):
         for f in files:
-            if ("ping.go" not in f) or ignore_dir(root) or (f in ignore_files):
+            if ("ping" not in f) or ignore_dir(root) or (f in ignore_files):
                 continue
 
             absolute_path = os.path.join(root, f)
@@ -108,10 +111,18 @@ def create_module_template(base_directory, target_file_path):
     module_template = generate_module_template(base_directory)
     write_module_template_to_file(target_file_path, module_template, module_template_map)
 
+def remove_files(files):
+    for file in files:
+        try:
+            os.remove(file)
+        except:
+            pass
+
 if __name__ == '__main__':
     base_directory = "./"
     project_template_path = 'singlemod.go'
     module_template_path = 'ping.go'
+    remove_files([project_template_path, module_template_path])
     create_project_template(base_directory, project_template_path)
     create_module_template(base_directory, module_template_path)
     print(f"All files have been written to {project_template_path}, {module_template_path}.")
