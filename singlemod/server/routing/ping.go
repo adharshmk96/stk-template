@@ -14,9 +14,9 @@ func setupPingRoutes(server *gsk.Server) {
 	dbConfig := viper.GetString(infra.ENV_SQLITE_FILEPATH)
 	conn := db.GetSqliteConnection(dbConfig)
 
-	stktemplateStorage := pingStorage.NewSqliteRepo(conn)
-	stktemplateService := service.NewPingService(stktemplateStorage)
-	stktemplateHandler := handler.NewPingHandler(stktemplateService)
+	pingStorage := pingStorage.NewSqliteRepo(conn)
+	pingService := service.NewPingService(pingStorage)
+	pingHandler := handler.NewPingHandler(pingService)
 
-	server.Get("/ping", stktemplateHandler.PingHandler)
+	server.Get("/ping", pingHandler.PingHandler)
 }
