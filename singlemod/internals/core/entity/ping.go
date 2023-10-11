@@ -3,8 +3,8 @@ package entity
 import "github.com/adharshmk96/stk/gsk"
 
 // Domain
-type User struct {
-	pong string
+type PingData struct {
+	ping string
 }
 
 // Storage
