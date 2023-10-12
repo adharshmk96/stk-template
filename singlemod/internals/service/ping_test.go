@@ -1,5 +1,13 @@
 package service_test
 
+// run the following command to generate mocks for PingStorage and Ping interfaces
+//
+// mockery --dir=internals/core/entity --name=^Ping.*
+//
+// and uncomment the following code
+
+/*
+
 import (
 	"testing"
 
@@ -25,3 +33,5 @@ func TestPingService(t *testing.T) {
 		assert.Equal(t, "pong", msg)
 	})
 }
+
+*/

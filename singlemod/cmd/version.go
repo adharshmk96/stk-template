@@ -9,9 +9,9 @@ import (
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "display the version of stktemplate",
+	Short: "display the version of singlemod",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("stktemplate version: %s\n", version)
+		fmt.Printf("singlemod version: %s\n", version)
 	},
 }
 

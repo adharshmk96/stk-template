@@ -1,115 +1,102 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Tuple, Callable
 
-ignore_files = ['template-gen.py', 'template.go', "go.mod", "go.sum", "template_map"]
-ignore_dirs = ['.git', 'mocks']
+BASE_PATH = Path('./')
+OUT_PROJECT_PATH = Path('singlemod.go')
+OUT_MODULE_PATH = Path('modules.go')
+
+IGNORE_DIRS = ['.git', 'mocks']
+IGNORE_FILES = ['template-gen.py', 'template.go', "go.mod", "go.sum", "template_map"]
+
+PLACEHOLDERS = { 
+    "app": "{{ .AppName }}",
+    "pkg": "{{ .PkgName }}",
+    "mod": "{{ .ModName }}",
+    "exported": "{{ .ExportedName }}",
+}
+
+def get_pkg_and_app_name_from_go_mod():
+    with open('go.mod', 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            if 'module' in line:
+                pkg_name = line.split(' ')[1].strip('\n')
+                app_name = pkg_name.split('/')[-1]
+                return pkg_name, app_name
+    return None, None
+
+pkg_name, app_name = get_pkg_and_app_name_from_go_mod()
+mod_name = "ping"
+exported_mod_name = "Ping"
 
 @dataclass
 class TemplateMap:
-    absolute_path: str
+    absolute_path: Path
     relative_path: str
     var_name: str
 
-def replace_pkg_app_names(content):
-    # Replacing specific strings with given replacements
-    content = content.replace('stktemplate', '{{ .AppName }}')
-    content = content.replace('github.com/adharshmk96/stk-template/singlemod', '{{ .PkgName }}')
+def replace_strings(content: str, replacements: dict) -> str:
+    for old, new in replacements.items():
+        content = content.replace(old, new)
     return content
 
-def replace_module_names(content):
-    # Replacing specific strings with given replacements
-    content = content.replace('ping', '{{ .ModName }}')
-    content = content.replace('Ping', '{{ .ExportedName }}')
-    return content
+def ignore_dir(dir: Path) -> bool:
+    return any(ignore in str(dir) for ignore in IGNORE_DIRS)
 
-def ignore_dir(dir):
-    for ignore_dir in ignore_dirs:
-        if ignore_dir in dir:
-            return True
-    return False
 
-def generate_var_name(file_path, base_path):
-    relative_path = file_path.replace(base_path, '').replace('\\', '/')
-    var_name = relative_path.replace(os.sep, '_').replace('.', '').strip('_').replace('-', '').replace('/', '')
-    var_name = var_name.upper()
-    return relative_path, var_name
+def generate_var_name(relative_path: str) -> str:
+    var_name = (
+        relative_path
+        .replace('.', '')
+        .replace('/', '_')
+        .replace('-', '')
+        .strip('_')
+        .upper()
+    )
+    return var_name
 
-def find_project_template_map(base_path):
-    project_template_map = []
-    for root, _, files in os.walk(base_path):
-        for f in files:
-            if ignore_dir(root) or (f in ignore_files):
-                continue
-                   
-            absolute_path = os.path.join(root, f)
-            relative_path, var_name = generate_var_name(absolute_path, base_path)
-            project_template_map.append(TemplateMap(absolute_path, relative_path, var_name + "_TPL"))
-    return project_template_map
 
-def generate_project_template(base_path):
-    project_template_map = find_project_template_map(base_path)
-    project_template = "package tpl\n\n"
-    for template in project_template_map:
-        with open(template.absolute_path, 'r', encoding='utf-8') as input_file:
-            content = input_file.read()
-            content = replace_pkg_app_names(content)
+def find_template_map(base_path: Path, filename_condition: Callable[[str], bool]) -> List[TemplateMap]:
+    template_map = []
+    for path in base_path.rglob('*'):
+        # Check if it's a file, satisfies the filename condition, not in ignore dirs/files
+        if (
+            path.is_file() 
+            and filename_condition(path.name) 
+            and not ignore_dir(path.parent) 
+            and path.name not in IGNORE_FILES
+        ):
+            relative_path = path.relative_to(base_path).as_posix()
+            var_name = generate_var_name(relative_path)
+            template_map.append(TemplateMap(path, relative_path, var_name))  # Here, path is a Path object
+    return template_map
+
+
+def generate_template(base_path: Path, filename_condition, replacements: dict) -> str:
+    template_map = find_template_map(base_path, filename_condition)
+    template_content = "package tpl\n\n"
+    for template in template_map:
+        with template.absolute_path.open('r', encoding='utf-8') as input_file:
+            content = replace_strings(input_file.read(), replacements)
             structure = f'var {template.var_name} = Template{{\n\tFilePath: "{template.relative_path}",\n\tContent: `{content}`,\n}}\n\n'
-            project_template += structure
-    return project_template
+            template_content += structure
+    return template_content
 
-def write_project_template_to_file(target_path, file_content, project_template_map):
-    with open(target_path, 'w') as output_file:
+def write_template_to_file(target_path: Path, file_content: str, template_map: List[TemplateMap], var_name: str) -> None:
+    with target_path.open('w', encoding='utf-8') as output_file:
         output_file.write(file_content)
-        output_file.write("var SingleModTemplates = []Template{\n")
-        for template in project_template_map:
+        output_file.write(f"var {var_name} = []Template{{\n")
+        for template in template_map:
             output_file.write(f'\t{template.var_name},\n')
         output_file.write("}\n")
 
-def create_project_template(base_directory, target_file_path):
-    project_template_map = find_project_template_map(base_directory)
-    project_template = generate_project_template(base_directory)
-    write_project_template_to_file(target_file_path, project_template, project_template_map)
+def create_template(base_directory: Path, target_file_path: Path, filename_condition, replacements: dict, var_name: str) -> None:
+    template_map = find_template_map(base_directory, filename_condition)
+    template_content = generate_template(base_directory, filename_condition, replacements)
+    write_template_to_file(target_file_path, template_content, template_map, var_name)
 
-
-def find_module_template_map(base_path):
-    module_template_map = []
-    for root, _, files in os.walk(base_path):
-        for f in files:
-            if ("ping" not in f) or ignore_dir(root) or (f in ignore_files):
-                continue
-
-            absolute_path = os.path.join(root, f)
-            relative_path, var_name = generate_var_name(absolute_path, base_path)
-            module_template_map.append(TemplateMap(absolute_path, relative_path, var_name+"_MOD"))
-    return module_template_map
-
-def generate_module_template(base_path):
-    module_template_map = find_module_template_map(base_path)
-    module_template = "package tpl\n\n"
-    for template in module_template_map:
-        with open(template.absolute_path, 'r', encoding='utf-8') as input_file:
-            content = input_file.read()
-            content = replace_pkg_app_names(content)
-            content = replace_module_names(content)
-
-            file_path = replace_module_names(template.relative_path)
-
-            structure = f'var {template.var_name} = Template{{\n\tFilePath: "{file_path}",\n\tContent: `{content}`,\n}}\n\n'
-            module_template += structure
-    return module_template
-
-def write_module_template_to_file(target_path, file_content, module_template_map):
-    with open(target_path, 'w') as output_file:
-        output_file.write(file_content)
-        output_file.write("var ModuleTemplates = []Template{\n")
-        for template in module_template_map:
-            output_file.write(f'\t{template.var_name},\n')
-        output_file.write("}\n")
-
-def create_module_template(base_directory, target_file_path):
-    module_template_map = find_module_template_map(base_directory)
-    module_template = generate_module_template(base_directory)
-    write_module_template_to_file(target_file_path, module_template, module_template_map)
 
 def remove_files(files):
     for file in files:
@@ -119,10 +106,35 @@ def remove_files(files):
             pass
 
 if __name__ == '__main__':
-    base_directory = "./"
-    project_template_path = 'singlemod.go'
-    module_template_path = 'ping.go'
-    remove_files([project_template_path, module_template_path])
-    create_project_template(base_directory, project_template_path)
-    create_module_template(base_directory, module_template_path)
-    print(f"All files have been written to {project_template_path}, {module_template_path}.")
+
+    
+
+    remove_files([OUT_PROJECT_PATH, OUT_MODULE_PATH])
+
+    create_template(
+        BASE_PATH, 
+        OUT_PROJECT_PATH, 
+        filename_condition=lambda f: True, 
+        replacements={
+            app_name: PLACEHOLDERS['app'],
+            pkg_name: PLACEHOLDERS['pkg'],
+            mod_name: PLACEHOLDERS['mod'],
+            exported_mod_name: PLACEHOLDERS['exported']
+        },
+        var_name="ProjectTemplates"
+    )
+    
+    create_template(
+        BASE_PATH,
+        OUT_MODULE_PATH,
+        filename_condition=lambda f: "ping" in f,
+        replacements={
+            app_name: PLACEHOLDERS['app'],
+            pkg_name: PLACEHOLDERS['pkg'],
+            mod_name: PLACEHOLDERS['mod'],
+            exported_mod_name: PLACEHOLDERS['exported']
+        },
+        var_name="ModuleTemplates"
+    )
+
+    print(f"All files have been written to {OUT_PROJECT_PATH}, {OUT_MODULE_PATH}.")

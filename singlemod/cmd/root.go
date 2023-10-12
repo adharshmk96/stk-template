@@ -14,9 +14,9 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "stktemplate",
-	Short: "stktemplate is a template for creating api servers.",
-	Long:  "stktemplate is a template for creating api servers using stk.",
+	Use:   "singlemod",
+	Short: "singlemod is a template for creating api servers.",
+	Long:  "singlemod is a template for creating api servers using stk.",
 }
 
 func Execute() {
@@ -28,7 +28,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "stktemplate.yaml", "config file.")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "singlemod.yaml", "config file.")
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -1,5 +1,13 @@
 package handler_test
 
+// run the following command to generate mocks for Ping interfaces
+//
+// mockery --dir=internals/core/entity --name=^Ping.*
+//
+// and uncomment the following code
+
+/*
+
 import (
 	"net/http"
 	"testing"
@@ -29,3 +37,5 @@ func TestPingHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 }
+
+*/
